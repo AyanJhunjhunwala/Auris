@@ -341,6 +341,17 @@
   display: flex;
   justify-content: center;
 }
+/* First search from the home screen: clear the record and search box so the
+   loading cover, ripples and orbiter have the stage to themselves. */
+.space.is-loading:not(.has-seed) .stage__search {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 240ms var(--ease),
+    visibility 0s linear 240ms;
+}
 
 /* ---------- home: a record floating above the search ---------- */
 

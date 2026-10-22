@@ -42,23 +42,6 @@ make dev                 # → http://localhost:5173
 | `OPENROUTER_API_KEY` | song-specific directions, "Make it sound like…", smarter language detection | rule-based directions |
 | `SPOTIFY_CLIENT_ID` | export ♥ songs to a playlist ([setup](#spotify)) | export hidden |
 
-## Demo in 60 seconds
-
-| # | Do | Shows |
-|---|---|---|
-| 1 | Search **Teardrop** | Five directions radiate out; neighbours sit by match |
-| 2 | Click **Darker** | Results fly out along the line instantly (prefetched) |
-| 3 | Hover, then click a cover | Preview plays at once (buffered on hover) |
-| 4 | Double-click a cover | Travel: the cover lands at the centre, the map re-forms |
-| 5 | Type *"more Portishead, slower"* in the dock | The agent streams a reply and adds a custom direction |
-| 6 | 文A → Spanish | Every direction is re-fetched in Spanish only |
-| 7 | ♥ a few → Library → Export | A Spotify playlist is created |
-| 8 | Telemetry icon | Per-source latency, cache hits, why this track, learned weights |
-
-![A direction taken (fixture data)](docs/branch-fixture.png)
-
-> Screenshots use fixture tracks with generated covers.
-
 ## Ranking at a glance
 
 ```mermaid

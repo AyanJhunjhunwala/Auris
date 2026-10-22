@@ -309,6 +309,27 @@ export default function App() {
     ];
   };
 
+  // Keyboard: space plays the selected (or current) song, S saves it,
+  // ← goes back along the trail. "/" (search) lives in SearchBar.
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || el?.closest("input, textarea, select, button, [role=listbox], [contenteditable]")) return;
+      if (libOpen || telOpen || menu || agentAt) return;
+      const current = shown?.recommendations.find((r) => r.track.key === selected)?.track ?? seed;
+      if (e.key === " " && current?.previewUrl) {
+        e.preventDefault();
+        preview.toggle(current.key, current.previewUrl);
+      } else if ((e.key === "s" || e.key === "S") && current) {
+        toggleSave(current);
+      } else if (e.key === "ArrowLeft" && trail.length > 1) {
+        travel(trail[trail.length - 2]);
+      }
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [shown, selected, seed, trail, libOpen, telOpen, menu, agentAt, preview, toggleSave, travel]);
+
   const agentOn = !!health?.agent.enabled;
   const selectedRec = shown?.recommendations.find((r) => r.track.key === selected);
 
