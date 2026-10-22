@@ -1,0 +1,23 @@
+# Go
+/backend/bin/
+/backend/data/
+*.test
+
+# Node
+node_modules/
+/web/dist/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+# Private interview notes
+/ARCHITECTURE.md
+
+# Python
+__pycache__/
+*.pyc
