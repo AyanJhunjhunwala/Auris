@@ -363,9 +363,9 @@ export default function App() {
           onPrime={preview.prime}
           onMenu={openMenu}
         >
-          {!seed && <HomeVisual />}
           {!seed && (
             <div className="stage__search">
+              <HomeVisual />
               <SearchBar onPick={travel} onFreeText={(q) => setSeedQuery({ query: q })} />
             </div>
           )}
