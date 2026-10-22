@@ -154,6 +154,14 @@ func (e *Engine) Search(ctx context.Context, q string, limit int) ([]model.Track
 	return nil, "", lastErr
 }
 
+const (
+	candidateDepth = 100
+	// The head is the slice of the pool that gets audio features and
+	// language tags before ranking: the best by fusion score.
+	headFactor = 5
+	minHead    = 120
+)
+
 func (e *Engine) timeout() time.Duration {
 	if e.SourceTimeout == 0 {
 		return 6 * time.Second
@@ -253,7 +261,9 @@ func (e *Engine) Similar(ctx context.Context, req model.SimilarRequest) (*Respon
 		plan.Override(Blend(seed.Features, ref.Features, w))
 	}
 	plan.Override(req.Targets)
-	opts := sources.Options{Limit: 50}
+	// Ask each source for its deepest list (ReccoBeats caps at 100); a
+	// bigger pool gives consensus and the ranker more to work with.
+	opts := sources.Options{Limit: candidateDepth}
 	if plan.Active {
 		opts.Target = plan.Compare
 	}
@@ -277,7 +287,7 @@ func (e *Engine) Similar(ctx context.Context, req model.SimilarRequest) (*Respon
 	// Audio features feed the ranker, so they're attached before ranking,
 	// to the most promising candidates by fusion score.
 	sort.SliceStable(p.items, func(i, j int) bool { return fusion(p.items[i]) > fusion(p.items[j]) })
-	head := p.items[:min(len(p.items), max(limit*3, 60))]
+	head := p.items[:min(len(p.items), max(limit*headFactor, minHead))]
 	if e.Features != nil && e.Features.Enabled() && len(head) > 0 {
 		copies := make([]model.Track, len(head))
 		cptrs := make([]*model.Track, len(head))

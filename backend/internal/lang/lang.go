@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -145,17 +146,34 @@ func (d *Detector) Detect(ctx context.Context, tracks []*model.Track) {
 	if len(unsure) == 0 || d.LLM == nil || !d.LLM.Enabled() {
 		return
 	}
-	got, err := d.classify(ctx, unsure)
-	if err != nil {
-		return // keep heuristic guesses
+	// Small batches in parallel: one call for the whole head is slow enough
+	// to time out, and a failed batch only costs its own tracks.
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for lo := 0; lo < len(unsure); lo += batchSize {
+		batch := unsure[lo:min(lo+batchSize, len(unsure))]
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got, err := d.classify(ctx, batch)
+			if err != nil {
+				return // keep heuristic guesses
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			for _, t := range batch {
+				if code, ok := got[t.Key]; ok {
+					t.Language = code
+					d.cache.Set(t.Key, code)
+				}
+			}
+		}()
 	}
-	for _, t := range unsure {
-		if code, ok := got[t.Key]; ok {
-			t.Language = code
-			d.cache.Set(t.Key, code)
-		}
-	}
+	wg.Wait()
 }
+
+// batchSize is how many songs one classification call covers.
+const batchSize = 30
 
 func (d *Detector) classify(ctx context.Context, tracks []*model.Track) (map[string]string, error) {
 	var b strings.Builder

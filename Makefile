@@ -1,9 +1,9 @@
-.PHONY: dev api web test build run deps
+.PHONY: dev api web web-dev test build run deps
 
 # Run API (:8080) and dashboard (:5173, proxies /api) together.
 # Installs web dependencies first if they are missing or out of date.
 dev: deps
-	@$(MAKE) -j2 api web
+	@$(MAKE) -j2 api web-dev
 
 deps: web/node_modules/.installed
 
@@ -16,6 +16,12 @@ api:
 	cd backend && go run ./cmd/auris
 
 web: deps
+	cd web && npm run dev
+
+# Under `make dev`, hold Vite back until the API is listening (up to 60s,
+# `go run` compiles first) so the proxy doesn't log ECONNREFUSED at startup.
+web-dev: deps
+	@for i in $$(seq 120); do nc -z 127.0.0.1 8080 2>/dev/null && break; sleep 0.5; done
 	cd web && npm run dev
 
 test: deps

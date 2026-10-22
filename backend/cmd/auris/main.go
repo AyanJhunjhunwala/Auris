@@ -95,7 +95,11 @@ func main() {
 	if !openrouter.Enabled() {
 		log.Warn("OPENROUTER_API_KEY not set: the right-click agent is disabled")
 	}
-	eng.Languages = lang.NewDetector(openrouter)
+	// Classifying songs needs no deep reasoning; a light call keeps it inside
+	// the source timeout.
+	langLLM := *openrouter
+	langLLM.Effort = "minimal"
+	eng.Languages = lang.NewDetector(&langLLM)
 	lib, err := library.Open(cfg.LibraryPath)
 	if err != nil {
 		log.Error("library", "path", cfg.LibraryPath, "err", err)
