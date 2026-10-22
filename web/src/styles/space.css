@@ -1,0 +1,734 @@
+/* The spatial view: the song at the centre, directions radiating out,
+   results laid out in the space between. */
+
+.stage {
+  position: relative;
+  height: 100svh;
+  min-height: 560px;
+}
+
+.space {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(60% 55% at 50% 48%, #0d0d0d 0%, var(--bg) 70%);
+  user-select: none;
+}
+.space__field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.space__ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.space__ring:nth-child(2) {
+  stroke-dasharray: 2 6;
+}
+.space__thread {
+  stroke: var(--line-2);
+  stroke-width: 1;
+  animation: fade-in var(--slow) var(--ease) both;
+}
+
+/* ---------- directions ---------- */
+
+.branch-line__base {
+  stroke: var(--line-2);
+  stroke-width: 1;
+  transition:
+    stroke var(--med),
+    stroke-width var(--med);
+}
+.branch-line__flow {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 14;
+  opacity: 0;
+  transition: opacity var(--med);
+}
+.branch-line.is-loading .branch-line__flow {
+  opacity: 0.35;
+  animation: flow 0.9s linear infinite;
+}
+.branch-line.is-active .branch-line__base {
+  stroke: var(--line-3);
+}
+.branch-line.is-active .branch-line__flow {
+  opacity: 0.9;
+  animation: flow 1.4s linear infinite;
+}
+.space.has-active .branch-line:not(.is-active) .branch-line__base {
+  stroke: var(--line);
+}
+
+.branch {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  max-width: 160px;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    color var(--fast),
+    border-color var(--fast),
+    background var(--fast),
+    box-shadow var(--med),
+    transform var(--med) var(--spring);
+  animation: branch-in var(--slow) var(--ease) both;
+}
+.branch:hover,
+.branch:focus-visible {
+  color: var(--text);
+  border-color: var(--line-3);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.04);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.branch:active {
+  transform: translate(-50%, -50%) scale(0.97);
+}
+.branch.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.18);
+}
+.branch.is-pending:not(.is-active) {
+  color: var(--text-3);
+}
+.space.has-active .branch:not(.is-active):not(:hover) {
+  opacity: 0.55;
+}
+.branch--reference::before,
+.branch--custom::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* ---------- results ---------- */
+
+.node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  transform: translate(var(--x), var(--y));
+  transition: transform 640ms var(--ease);
+  animation: node-in 640ms var(--ease) both;
+}
+.node__art {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-3);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.9);
+  transition:
+    transform var(--med) var(--spring),
+    box-shadow var(--med),
+    filter var(--med);
+}
+.node__art img,
+.node__blank {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.node__blank {
+  display: block;
+  background: linear-gradient(135deg, var(--surface-3), var(--surface-2));
+}
+.space.is-loading .node {
+  opacity: 0.4;
+}
+.node:hover,
+.node:focus-within,
+.node.is-selected {
+  z-index: 5;
+}
+.node:hover .node__art,
+.node__art:focus-visible {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 16px 40px -10px rgba(0, 0, 0, 1);
+}
+.node.is-selected .node__art {
+  transform: scale(1.22);
+  box-shadow:
+    0 0 0 1.5px var(--accent),
+    0 0 40px rgba(255, 255, 255, 0.15);
+}
+.node.is-playing .node__art {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.node__cap {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 180px;
+  transform: translate(-50%, -4px);
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    opacity var(--fast),
+    transform var(--med) var(--ease);
+}
+.node__cap b,
+.node__cap span {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.node__cap b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.node__cap span {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.node:hover .node__cap,
+.node:focus-within .node__cap,
+.node.is-selected .node__cap {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.node__ctl {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(12px);
+  animation: pop-in var(--fast) var(--ease);
+}
+.node__ctl button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+}
+.node__ctl button:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.node__ctl button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.node__ctl button.is-on svg {
+  fill: currentColor;
+  color: var(--text);
+}
+
+/* ---------- the song ---------- */
+
+.core {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+}
+.core__art {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 40px 100px -30px rgba(0, 0, 0, 1),
+    0 0 120px -20px rgba(255, 255, 255, 0.08);
+  animation: core-in var(--slow) var(--ease) both;
+  transition: transform var(--med) var(--spring);
+}
+.core__art:hover {
+  transform: scale(1.015);
+}
+.core__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.core__art.is-playing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.space.is-loading .core__art {
+  animation: core-wait 1.4s ease-in-out infinite;
+}
+.core__empty {
+  display: none;
+}
+.core__meta {
+  position: absolute;
+  top: calc(100% + 18px);
+  left: 50%;
+  width: max(100%, 280px);
+  transform: translateX(-50%);
+  text-align: center;
+}
+.core__meta h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.core__meta p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.stage__search {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 10;
+  width: min(520px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+  animation: core-in var(--slow) var(--ease) both;
+  display: flex;
+  justify-content: center;
+}
+
+/* ---------- dock: history + free-form direction ---------- */
+
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 20px;
+  pointer-events: none;
+}
+.dock > * {
+  pointer-events: auto;
+}
+.trail {
+  position: absolute;
+  left: 20px;
+  bottom: 4px;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trail li + li {
+  margin-left: -10px;
+}
+.trail button {
+  display: block;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-3);
+  transition: transform var(--med) var(--spring);
+}
+.trail button:hover,
+.trail button:focus-visible {
+  transform: translateY(-4px) scale(1.1);
+}
+.trail img,
+.trail span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ask {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(440px, calc(100vw - 140px));
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(14px);
+  color: var(--text-3);
+  transition: border-color var(--fast);
+}
+.ask:focus-within {
+  border-color: var(--line-3);
+  color: var(--text);
+}
+.ask.is-busy {
+  animation: core-wait 1.4s ease-in-out infinite;
+}
+.ask input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--text);
+}
+.ask input::placeholder {
+  color: var(--text-3);
+}
+.ask__reply {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+  animation: pop-in var(--med) var(--ease);
+}
+@media (max-width: 640px) {
+  .trail {
+    display: none;
+  }
+  .ask {
+    width: calc(100vw - 40px);
+  }
+  .bar {
+    grid-template-columns: auto 1fr auto;
+  }
+  .bar .search--compact {
+    width: 100%;
+  }
+}
+
+/* ---------- list (below the fold) ---------- */
+
+.list {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 96px;
+}
+.list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: var(--r-md);
+  transition: background var(--fast);
+}
+.row:hover,
+.row.is-playing {
+  background: var(--surface-2);
+}
+.row__art {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface-3);
+}
+.row__art img,
+.row__art > span:first-child {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.row__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity var(--fast);
+}
+.row:hover .row__play,
+.row.is-playing .row__play,
+.row__art:focus-visible .row__play {
+  opacity: 1;
+}
+.row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.row__title,
+.row__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row__title {
+  font-size: 14px;
+  font-weight: 500;
+}
+.row__artist {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.row__score {
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows rise in as they scroll into view. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 420ms var(--ease) calc(var(--i, 0) * 30ms),
+    transform 520ms var(--ease) calc(var(--i, 0) * 30ms),
+    background var(--fast);
+}
+
+/* ---------- motion ---------- */
+
+@keyframes node-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--cx), var(--cy)) scale(0.3);
+  }
+}
+@keyframes branch-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+@keyframes core-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes core-wait {
+  50% {
+    opacity: 0.6;
+  }
+}
+@keyframes breathe {
+  50% {
+    box-shadow:
+      0 0 0 1.5px var(--accent),
+      0 0 48px rgba(255, 255, 255, 0.22);
+  }
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -17;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+  .node {
+    transition: none;
+  }
+}
+
+/* ---------- loading the next song ---------- */
+
+/* Current results collapse into the centre; directions recede. */
+.space.is-loading .node {
+  opacity: 0;
+  transform: translate(var(--cx), var(--cy)) scale(0.25);
+  transition:
+    transform 460ms var(--ease),
+    opacity 300ms var(--ease);
+}
+.space.is-loading .branch {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  pointer-events: none;
+  transition:
+    opacity 260ms var(--ease),
+    transform 260ms var(--ease);
+}
+.space.is-loading .branch-line,
+.space.is-loading .space__thread {
+  opacity: 0;
+  transition: opacity 260ms var(--ease);
+}
+.space.is-loading .core__art:not(.is-arriving) {
+  animation: none;
+  opacity: 0.5;
+  filter: grayscale(0.4);
+  transition:
+    opacity var(--med),
+    filter var(--med);
+}
+
+/* The next song's cover lands at the centre and sharpens into focus. */
+.core__art.is-arriving {
+  animation: arrive 700ms var(--ease) both;
+}
+.core__art.is-arriving::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.14) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sheen 1.4s var(--ease) 300ms infinite;
+}
+.core__meta.is-loading h1,
+.core__meta.is-loading p {
+  animation: core-wait 1.4s ease-in-out infinite;
+}
+
+/* Ripples pulse outward from the cover while sources answer. */
+.ripple {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: ripple 1.8s var(--ease) infinite both;
+}
+
+/* An arc orbits the cover. */
+.orbiter {
+  animation: spin 1.6s linear infinite;
+}
+.orbiter__track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.orbiter__arc {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 14 86;
+}
+
+/* Placeholders on a direction that's still loading. */
+.node.is-ghost {
+  border-radius: 6px;
+  background: linear-gradient(110deg, var(--surface-2) 30%, var(--surface-3) 50%, var(--surface-2) 70%);
+  background-size: 250% 100%;
+  animation:
+    node-in 520ms var(--ease) both,
+    shimmer 1.3s linear infinite;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+    filter: blur(10px);
+  }
+}
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes ripple {
+  from {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.4);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ripple,
+  .orbiter__arc {
+    display: none;
+  }
+}

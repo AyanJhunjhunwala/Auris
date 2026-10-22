@@ -1,0 +1,40 @@
+/* Auris tokens — see design-system/auris/pages/space.md.
+   Exaggerated-minimal / Swiss: true black, neutral greys (no blue cast),
+   white as the only accent, Inter throughout. Status colours appear only
+   in telemetry. */
+:root {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #121212;
+  --surface-3: #1a1a1a;
+  --line: #1c1c1c;
+  --line-2: #2a2a2a;
+  --line-3: #3d3d3d;
+
+  --text: #fafafa;
+  --text-2: #a3a3a3; /* 8.3:1 on black */
+  --text-3: #737373; /* 4.6:1 on black: small labels only */
+  --accent: #ffffff;
+  --on-accent: #000000;
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --off: #525252;
+
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --fast: 140ms;
+  --med: 240ms;
+  --slow: 520ms;
+
+  --shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.9);
+}
