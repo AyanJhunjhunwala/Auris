@@ -5,6 +5,7 @@ import type { AgentPlan, Health, LanguageOption, LibraryEntry, Recommendation, S
 import { AgentPanel } from "./components/AgentPanel";
 import { ContextMenu, type MenuItem } from "./components/ContextMenu";
 import { Drawer } from "./components/Drawer";
+import { HomeVisual } from "./components/HomeVisual";
 import { LanguageMenu } from "./components/LanguageMenu";
 import { Library } from "./components/Library";
 import { Detail } from "./components/Results";
@@ -362,6 +363,7 @@ export default function App() {
           onPrime={preview.prime}
           onMenu={openMenu}
         >
+          {!seed && <HomeVisual />}
           {!seed && (
             <div className="stage__search">
               <SearchBar onPick={travel} onFreeText={(q) => setSeedQuery({ query: q })} />

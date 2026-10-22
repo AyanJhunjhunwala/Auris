@@ -170,7 +170,7 @@ export function Space(p: Props) {
   };
 
   return (
-    <div ref={ref} className={`space ${p.loading ? "is-loading" : ""} ${activeIdx >= 0 ? "has-active" : ""}`} aria-busy={p.loading}>
+    <div ref={ref} className={`space ${p.seed ? "has-seed" : ""} ${p.loading ? "is-loading" : ""} ${activeIdx >= 0 ? "has-active" : ""}`} aria-busy={p.loading}>
       <svg className="space__field" width={w} height={h} aria-hidden>
         {[0.42, 0.7, 1].map((k, i) => (
           <ellipse key={i} cx={cx} cy={cy} rx={coverR + (Rx - coverR) * k} ry={coverR + (Ry - coverR) * k} className="space__ring" />
