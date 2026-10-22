@@ -59,6 +59,8 @@ export function Space(p: Props) {
   const bottom = small ? 84 : 76;
   const cx = w / 2;
   const cy = top + (h - top - bottom) / 2;
+  // While a song loads, the cover sits lower so the orbiter and ripples clear the header.
+  const coreY = cy + (p.loading ? (small ? 24 : 36) : 0);
   const cover = clamp(Math.min(w, h - top - bottom) * 0.27, 120, 232);
   const coverR = cover / 2;
   // Directions end on an ellipse so wide screens give side branches room.
@@ -195,9 +197,9 @@ export function Space(p: Props) {
         {activeIdx >= 0 &&
           placed.map((n) => <line key={n.rec.track.key} x1={cx} y1={cy} x2={n.x} y2={n.y} className="space__thread" />)}
         {p.loading && (
-          <g className="orbiter" style={{ transformOrigin: `${cx}px ${cy}px` }}>
-            <circle cx={cx} cy={cy} r={coverR * 1.42} className="orbiter__track" />
-            <circle cx={cx} cy={cy} r={coverR * 1.42} className="orbiter__arc" pathLength={100} />
+          <g className="orbiter" style={{ transformOrigin: `${cx}px ${coreY}px` }}>
+            <circle cx={cx} cy={coreY} r={coverR * 1.42} className="orbiter__track" />
+            <circle cx={cx} cy={coreY} r={coverR * 1.42} className="orbiter__arc" pathLength={100} />
           </g>
         )}
       </svg>
@@ -207,7 +209,7 @@ export function Space(p: Props) {
           <span
             key={i}
             className="ripple"
-            style={{ left: cx, top: cy, width: cover, height: cover, animationDelay: `${i * 0.6}s` }}
+            style={{ left: cx, top: coreY, width: cover, height: cover, animationDelay: `${i * 0.6}s` }}
             aria-hidden
           />
         ))}
@@ -295,7 +297,7 @@ export function Space(p: Props) {
         );
       })}
 
-      <div className="core" style={{ left: cx, top: cy, width: cover, height: cover }}>
+      <div className="core" style={{ left: cx, top: coreY, width: cover, height: cover }}>
         {p.loading && p.next ? (
           <div className="core__art is-arriving" key={`next-${p.next.key}`} aria-busy="true">
             {p.next.artworkUrl ? <img src={art(p.next.artworkUrl, 500)} alt="" draggable={false} /> : <span className="node__blank" />}
