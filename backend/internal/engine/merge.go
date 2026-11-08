@@ -124,6 +124,7 @@ func (p *pool) add(c model.Candidate) {
 	}
 	// Tier 3: fuzzy title match inside the artist block.
 	block := matchArtist(c.Track.Artist)
+	fuzzy := false
 	if len(roots) == 0 {
 		best, bestSim := -1, 0.0
 		for _, n := range p.blocks[block] {
@@ -134,8 +135,18 @@ func (p *pool) add(c model.Candidate) {
 		}
 		if best >= 0 {
 			roots = append(roots, best)
+			fuzzy = true
 		}
 	}
+
+	rec := model.SourceRecord{Artist: c.Track.Artist, Title: c.Track.Title}
+	if len(c.Evidence) > 0 {
+		rec.Source = c.Evidence[0].Source
+	}
+	if len(roots) > 0 {
+		rec.Match = matchKind(p.nodes[roots[0]].Track, c.Track, fuzzy)
+	}
+	c.Records = []model.SourceRecord{rec}
 
 	if len(roots) == 0 {
 		cc := c
@@ -180,7 +191,33 @@ func (p *pool) dropItem(c *model.Candidate) {
 	}
 }
 
+// matchKind says which tier joined t to the cluster represented by root.
+func matchKind(root, t model.Track, fuzzy bool) string {
+	switch {
+	case fuzzy:
+		return "fuzzy"
+	case sources.TrackKey(root.Artist, root.Title) == sources.TrackKey(t.Artist, t.Title):
+		return "exact"
+	case matchKey(root) == matchKey(t):
+		return "folded"
+	default:
+		return "id"
+	}
+}
+
 func mergeInto(dst *model.Candidate, src model.Candidate) {
+	for _, r := range src.Records {
+		dup := false
+		for _, d := range dst.Records {
+			if d.Source == r.Source && d.Artist == r.Artist && d.Title == r.Title {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			dst.Records = append(dst.Records, r)
+		}
+	}
 	d, s := &dst.Track, src.Track
 	fill := func(a *string, b string) {
 		if *a == "" {

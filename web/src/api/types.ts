@@ -49,12 +49,22 @@ export interface Evidence {
   reason?: string;
 }
 
+/** One source's version of a track, before entity resolution merged it. */
+export interface SourceRecord {
+  source: SourceName;
+  artist: string;
+  title: string;
+  /** How it joined: "" first record, then "id" | "exact" | "folded" | "fuzzy". */
+  match?: string;
+}
+
 export interface Recommendation {
   track: Track;
   score: number;
   evidence: Evidence[];
   breakdown: { signals: Record<string, number>; logit: number };
   reasons: string[];
+  records?: SourceRecord[];
 }
 
 export type SourceStatus = "ok" | "empty" | "error" | "disabled" | "skipped" | "timeout";

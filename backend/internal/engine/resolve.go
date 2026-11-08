@@ -80,7 +80,11 @@ func sameRecording(a, b model.Track) (float64, bool) {
 	if !sameVariants(a.Title, b.Title) {
 		return 0, false // "Song" vs "Song (Live)" are different recordings
 	}
-	sim := jaroWinkler(matchTitle(a.Title), matchTitle(b.Title))
+	ta, tb := matchTitle(a.Title), matchTitle(b.Title)
+	if !sameNumbers(ta, tb) {
+		return 0, false // "Kapitel 218" vs "Kapitel 279", "Part 1" vs "Part 2"
+	}
+	sim := jaroWinkler(ta, tb)
 	if a.DurationMs > 0 && b.DurationMs > 0 {
 		d := a.DurationMs - b.DurationMs
 		if d < 0 {
@@ -92,6 +96,41 @@ func sameRecording(a, b model.Track) (float64, bool) {
 		return sim, sim >= fuzzyWithDuration
 	}
 	return sim, sim >= fuzzyNoDuration
+}
+
+// sameNumbers reports whether two titles contain the same digit runs in the
+// same order. Titles that differ only by a number (chapters, parts, volumes)
+// look nearly identical to Jaro-Winkler but are different recordings.
+func sameNumbers(a, b string) bool {
+	na, nb := digitRuns(a), digitRuns(b)
+	if len(na) != len(nb) {
+		return false
+	}
+	for i := range na {
+		if na[i] != nb[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func digitRuns(s string) []string {
+	var out []string
+	start := -1
+	for i, r := range s {
+		isDigit := r >= '0' && r <= '9'
+		if isDigit && start < 0 {
+			start = i
+		}
+		if !isDigit && start >= 0 {
+			out = append(out, strings.TrimLeft(s[start:i], "0"))
+			start = -1
+		}
+	}
+	if start >= 0 {
+		out = append(out, strings.TrimLeft(s[start:], "0"))
+	}
+	return out
 }
 
 func sameVariants(a, b string) bool {

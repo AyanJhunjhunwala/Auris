@@ -76,6 +76,40 @@ func TestPoolFuzzyMatchNeedsAgreeingDuration(t *testing.T) {
 	}
 }
 
+func TestPoolKeepsNumberedTitlesApart(t *testing.T) {
+	// Seen in live data: two audiobook chapters 3 s apart in length.
+	p := seedPool()
+	p.add(track("Liane Mars", "Kapitel 279 - Asrai - Die Magie der Drachen", 197100, model.IDs{}))
+	p.add(track("Liane Mars", "Kapitel 218 - Asrai - Die Magie der Drachen", 194400, model.IDs{}))
+	if len(p.items) != 2 {
+		t.Fatalf("different chapters merged: %d clusters", len(p.items))
+	}
+	p = seedPool()
+	p.add(track("Band", "Symphony No. 5", 300000, model.IDs{}))
+	p.add(track("Band", "Symphony No 05", 301000, model.IDs{}))
+	if len(p.items) != 1 {
+		t.Fatalf("same number with different formatting should still merge, got %d", len(p.items))
+	}
+}
+
+func TestPoolRecordsHowEachSourceMatched(t *testing.T) {
+	ev := func(c model.Candidate, src model.SourceName) model.Candidate {
+		c.Evidence = []model.Evidence{{Source: src}}
+		return c
+	}
+	p := seedPool()
+	p.add(ev(track("Beyoncé", "Déjà Vu", 240000, model.IDs{}), "deezer"))
+	p.add(ev(track("Beyonce", "Deja Vu", 240000, model.IDs{}), "lastfm"))
+	p.add(ev(track("Beyonce", "Deja Vu!", 241000, model.IDs{}), "listenbrainz"))
+	if len(p.items) != 1 {
+		t.Fatalf("want 1 cluster, got %d", len(p.items))
+	}
+	recs := p.items[0].Records
+	if len(recs) != 3 || recs[0].Match != "" || recs[1].Match != "folded" {
+		t.Fatalf("unexpected records: %+v", recs)
+	}
+}
+
 func TestPoolUnionsBridgedClusters(t *testing.T) {
 	a := track("Artist One", "Song", 0, model.IDs{ISRC: "USAAA0000001"})
 	b := track("Artist 1", "Song (Single)", 0, model.IDs{MBID: "mbid-1"})

@@ -83,6 +83,20 @@ type Evidence struct {
 type Candidate struct {
 	Track    Track      `json:"track"`
 	Evidence []Evidence `json:"evidence"`
+	// Records lists every source record entity resolution merged into this
+	// candidate, with how each one matched.
+	Records []SourceRecord `json:"records,omitempty"`
+}
+
+// SourceRecord is one source's version of a track before merging.
+type SourceRecord struct {
+	Source SourceName `json:"source"`
+	Artist string     `json:"artist"`
+	Title  string     `json:"title"`
+	// Match is how it joined the cluster: "" for the first record, then
+	// "id" (shared ISRC/MBID/Spotify/Deezer ID), "exact" (same TrackKey),
+	// "folded" (accents, "&", leading "the") or "fuzzy" (Jaro-Winkler + duration).
+	Match string `json:"match,omitempty"`
 }
 
 // Breakdown exposes every signal the ranker used, so the dashboard can show
@@ -94,11 +108,12 @@ type Breakdown struct {
 
 // Recommendation is a scored candidate in final order.
 type Recommendation struct {
-	Track     Track      `json:"track"`
-	Score     float64    `json:"score"` // 0..1
-	Evidence  []Evidence `json:"evidence"`
-	Breakdown Breakdown  `json:"breakdown"`
-	Reasons   []string   `json:"reasons"`
+	Track     Track          `json:"track"`
+	Score     float64        `json:"score"` // 0..1
+	Evidence  []Evidence     `json:"evidence"`
+	Breakdown Breakdown      `json:"breakdown"`
+	Reasons   []string       `json:"reasons"`
+	Records   []SourceRecord `json:"records,omitempty"`
 }
 
 // SourceStatus is the outcome of one source call within a request.

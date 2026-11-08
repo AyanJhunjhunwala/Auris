@@ -1,5 +1,13 @@
 import { ExternalLink, Sparkles } from "lucide-react";
 import type { Features, Recommendation, Track } from "../api/types";
+import { sourceLabel } from "./Telemetry";
+
+const MATCH_LABEL: Record<string, string> = {
+  id: "shared ID",
+  exact: "normalized",
+  folded: "accent-folded",
+  fuzzy: "fuzzy + duration",
+};
 
 const FEATURE_ROWS: { k: keyof Features; label: string; fmt?: (v: number) => string; max?: number; min?: number }[] = [
   { k: "energy", label: "Energy" },
@@ -82,6 +90,22 @@ export function Detail({
               <li key={r}>{r}</li>
             ))}
           </ul>
+          {rec.records && rec.records.length > 1 && (
+            <div className="records">
+              <p className="records__head">Merged from {rec.records.length} source records</p>
+              <ul>
+                {rec.records.map((r, i) => (
+                  <li key={`${r.source}|${r.artist}|${r.title}|${i}`} className="records__item">
+                    <span className="records__src">{sourceLabel(r.source)}</span>
+                    <span className="records__name">
+                      {r.artist} · {r.title}
+                    </span>
+                    {r.match && <span className="records__match mono">{MATCH_LABEL[r.match] ?? r.match}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <dl className="signals">
             {Object.entries(rec.breakdown.signals)
               .sort((a, b) => a[0].localeCompare(b[0]))
