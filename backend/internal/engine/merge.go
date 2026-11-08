@@ -8,28 +8,44 @@ import (
 	"github.com/ayanjhunjhunwala/auris/backend/internal/sources"
 )
 
-// pool deduplicates candidates across sources. Two sightings are the same
-// song if they share any strong ID (MBID, ISRC, Spotify, Deezer) or, failing
-// that, the normalised artist|title key.
+// pool deduplicates candidates across sources (entity resolution). Two
+// sightings are the same song if they share any strong ID (MBID, ISRC,
+// Spotify, Deezer), the exact TrackKey, the folded match key, or, within the
+// same artist block, a fuzzy title match confirmed by duration (see
+// resolve.go).
+//
+// Clusters live in a union-find. When one sighting matches two existing
+// clusters (say, an ISRC links a Deezer record to a MusicBrainz one), the
+// clusters are unioned, so the result doesn't depend on which source answered
+// first. items always holds one representative per cluster.
 type pool struct {
-	items   []*model.Candidate
-	index   map[string]int
+	items  []*model.Candidate // cluster representatives, in arrival order
+	nodes  []*model.Candidate // every cluster ever created, by node id
+	parent []int              // union-find parent pointers over nodes
+	index  map[string]int     // match key -> some node in its cluster
+	blocks map[string][]int   // folded lead artist -> node ids (fuzzy tier)
+
 	exclude map[string]bool // ID keys of the seed (and reference) track
 	// variants the seed itself carries ("live", "remix"...); candidates
 	// with other variants are a different recording and get dropped.
 	seedVariants map[string]bool
+	seeds        []model.Track
 }
 
 // newPool's first track is the seed; any others are excluded as well.
 func newPool(exclude ...model.Track) *pool {
-	p := &pool{index: map[string]int{}, exclude: map[string]bool{}, seedVariants: map[string]bool{}}
+	p := &pool{index: map[string]int{}, blocks: map[string][]int{}, exclude: map[string]bool{}, seedVariants: map[string]bool{}}
 	if len(exclude) > 0 {
 		p.seedVariants = sources.VariantTags(exclude[0].Title)
 	}
 	for _, t := range exclude {
-		for _, k := range idKeys(t) {
+		if t.Key == "" {
+			t.Key = sources.TrackKey(t.Artist, t.Title)
+		}
+		for _, k := range allKeys(t) {
 			p.exclude[k] = true
 		}
+		p.seeds = append(p.seeds, t)
 	}
 	return p
 }
@@ -51,13 +67,34 @@ func idKeys(t model.Track) []string {
 	return keys
 }
 
+// allKeys is idKeys plus the folded match key.
+func allKeys(t model.Track) []string {
+	return append(idKeys(t), matchKey(t))
+}
+
 func (p *pool) isSeed(t model.Track) bool {
-	for _, k := range idKeys(t) {
+	for _, k := range allKeys(t) {
 		if p.exclude[k] {
 			return true
 		}
 	}
+	block := matchArtist(t.Artist)
+	for _, s := range p.seeds {
+		if matchArtist(s.Artist) == block {
+			if _, ok := sameRecording(s, t); ok {
+				return true
+			}
+		}
+	}
 	return false
+}
+
+func (p *pool) find(i int) int {
+	for p.parent[i] != i {
+		p.parent[i] = p.parent[p.parent[i]] // path halving
+		i = p.parent[i]
+	}
+	return i
 }
 
 func (p *pool) add(c model.Candidate) {
@@ -73,24 +110,114 @@ func (p *pool) add(c model.Candidate) {
 			return // e.g. a live cut when the seed is the studio version
 		}
 	}
-	keys := idKeys(c.Track)
-	for _, k := range keys {
-		if i, ok := p.index[k]; ok {
-			mergeInto(p.items[i], c)
-			for _, k2 := range idKeys(p.items[i].Track) {
-				p.index[k2] = i
+
+	// Tiers 1 and 2: every cluster this sighting shares a key with.
+	var roots []int
+	seen := map[int]bool{}
+	for _, k := range allKeys(c.Track) {
+		if n, ok := p.index[k]; ok {
+			if r := p.find(n); !seen[r] {
+				seen[r] = true
+				roots = append(roots, r)
 			}
+		}
+	}
+	// Tier 3: fuzzy title match inside the artist block.
+	block := matchArtist(c.Track.Artist)
+	fuzzy := false
+	if len(roots) == 0 {
+		best, bestSim := -1, 0.0
+		for _, n := range p.blocks[block] {
+			r := p.find(n)
+			if sim, ok := sameRecording(p.nodes[r].Track, c.Track); ok && sim > bestSim {
+				best, bestSim = r, sim
+			}
+		}
+		if best >= 0 {
+			roots = append(roots, best)
+			fuzzy = true
+		}
+	}
+
+	rec := model.SourceRecord{Artist: c.Track.Artist, Title: c.Track.Title}
+	if len(c.Evidence) > 0 {
+		rec.Source = c.Evidence[0].Source
+	}
+	if len(roots) > 0 {
+		rec.Match = matchKind(p.nodes[roots[0]].Track, c.Track, fuzzy)
+	}
+	c.Records = []model.SourceRecord{rec}
+
+	if len(roots) == 0 {
+		cc := c
+		id := len(p.nodes)
+		p.nodes = append(p.nodes, &cc)
+		p.parent = append(p.parent, id)
+		p.items = append(p.items, &cc)
+		p.indexNode(id, cc.Track, block)
+		return
+	}
+
+	// Merge into the first cluster, then union any others it bridges.
+	root := roots[0]
+	mergeInto(p.nodes[root], c)
+	for _, r := range roots[1:] {
+		mergeInto(p.nodes[root], *p.nodes[r])
+		p.parent[r] = root
+		p.dropItem(p.nodes[r])
+	}
+	p.indexNode(root, p.nodes[root].Track, block)
+}
+
+// indexNode points every key of t (and its artist block) at node id.
+func (p *pool) indexNode(id int, t model.Track, block string) {
+	for _, k := range allKeys(t) {
+		p.index[k] = id
+	}
+	for _, n := range p.blocks[block] {
+		if n == id {
 			return
 		}
 	}
-	cc := c
-	p.items = append(p.items, &cc)
-	for _, k := range keys {
-		p.index[k] = len(p.items) - 1
+	p.blocks[block] = append(p.blocks[block], id)
+}
+
+func (p *pool) dropItem(c *model.Candidate) {
+	for i, it := range p.items {
+		if it == c {
+			p.items = append(p.items[:i], p.items[i+1:]...)
+			return
+		}
+	}
+}
+
+// matchKind says which tier joined t to the cluster represented by root.
+func matchKind(root, t model.Track, fuzzy bool) string {
+	switch {
+	case fuzzy:
+		return "fuzzy"
+	case sources.TrackKey(root.Artist, root.Title) == sources.TrackKey(t.Artist, t.Title):
+		return "exact"
+	case matchKey(root) == matchKey(t):
+		return "folded"
+	default:
+		return "id"
 	}
 }
 
 func mergeInto(dst *model.Candidate, src model.Candidate) {
+	for _, r := range src.Records {
+		dup := false
+		for _, d := range dst.Records {
+			if d.Source == r.Source && d.Artist == r.Artist && d.Title == r.Title {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			dst.Records = append(dst.Records, r)
+		}
+	}
 	d, s := &dst.Track, src.Track
 	fill := func(a *string, b string) {
 		if *a == "" {

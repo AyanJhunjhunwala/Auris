@@ -876,6 +876,41 @@ img {
   font-size: 12px;
   color: var(--text-2);
 }
+.records {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.records__head {
+  margin: 0 0 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.records ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.records__item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+}
+.records__src {
+  color: var(--text-3);
+}
+.records__name {
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.records__match {
+  color: var(--text-3);
+  font-size: 10px;
+}
 .detail__actions {
   display: flex;
   flex-wrap: wrap;

@@ -103,6 +103,7 @@ func rank(items []*model.Candidate, seed model.Track, plan SteerPlan, r *learn.R
 			Evidence:  s.c.Evidence,
 			Breakdown: model.Breakdown{Signals: roundAll(s.sig), Logit: math.Round(s.logit*1000) / 1000},
 			Reasons:   reasons(s, plan),
+			Records:   s.c.Records,
 		})
 	}
 	return out

@@ -59,6 +59,15 @@ xychart-beta
   bar [2.0, 1.6, 1.5, 1.5, 1.4, 1.3, 1.2, 1.0, 0.4, 0.1]
 ```
 
+Deduplication (entity resolution) runs in three tiers: shared strong IDs
+(ISRC, MBID, Spotify, Deezer), then a folded artist + title key (accents,
+"&"/"and" and a leading "the" normalised), then Jaro-Winkler title similarity
+within the same artist, confirmed by duration (±3 s) and never across
+titles whose numbers differ ("Part 1" vs "Part 2"). Clusters live in a
+union-find, so a record that links two groups merges them regardless of which
+source answered first. The "Why this track" panel lists every source
+record merged into a song and which tier matched it.
+
 Quality filters: karaoke, tribute, sped-up and nightcore uploads are dropped;
 live and remix versions only appear if the seed is one; half-time tempos count
 as matches.
